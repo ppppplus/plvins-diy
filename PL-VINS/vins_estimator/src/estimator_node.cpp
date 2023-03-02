@@ -246,6 +246,7 @@ void process()
 {
     while (true)
     {
+        // 获取三种数据：imu/feature/linefeature
         //std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>, sensor_msgs::PointCloudConstPtr>> measurements;
         std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>,
                 std::pair<sensor_msgs::PointCloudConstPtr,sensor_msgs::PointCloudConstPtr> >> measurements;
@@ -393,6 +394,7 @@ int main(int argc, char **argv)
 
     registerPub(n);
 
+    // 监听imu数据和点/线特征提取节点发布的特征图
     ros::Subscriber sub_imu = n.subscribe(IMU_TOPIC, 2000, imu_callback, ros::TransportHints().tcpNoDelay());
     ros::Subscriber sub_image = n.subscribe("/feature_tracker/feature", 2000, feature_callback);
     ros::Subscriber sub_linefeature = n.subscribe("/linefeature_tracker/linefeature", 2000, linefeature_callback);
