@@ -1,8 +1,8 @@
 project( line-descriptor )
 
 cmake_minimum_required(VERSION 2.7)
-Set(OpenCV_DIR "/home/nvidia/package/opencv-3.2.0/build") # important find opencv version
-find_package(OpenCV 3.2 QUIET)
+# Set(OpenCV_DIR "/home/nvidia/package/opencv-3.2.0/build") # important find opencv version
+find_package(OpenCV)
 
 if(COMMAND cmake_policy)
   	cmake_policy(SET CMP0003 NEW)	

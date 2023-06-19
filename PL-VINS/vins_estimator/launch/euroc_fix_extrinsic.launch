@@ -9,12 +9,12 @@
         <param name="vins_folder" type="string" value="$(arg vins_path)" />
     </node>
 
-    <!-- <node name="linefeature_tracker" pkg="feature_tracker" type="LineFeature_tracker" output="screen">
+    <node name="linefeature_tracker" pkg="feature_tracker" type="LineFeature_tracker" output="screen">
         <param name="config_file" type="string" value="$(arg config_path)" />
         <param name="vins_folder" type="string" value="$(arg vins_path)" />
     </node>    
 
-    <node name="plvins_estimator" pkg="plvins_estimator" type="plvins_estimator" output="screen">
+    <!-- <node name="plvins_estimator" pkg="plvins_estimator" type="plvins_estimator" output="screen">
        <param name="config_file" type="string" value="$(arg config_path)" />
        <param name="vins_folder" type="string" value="$(arg vins_path)" />
     </node> -->

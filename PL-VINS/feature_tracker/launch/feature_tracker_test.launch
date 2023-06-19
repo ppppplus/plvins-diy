@@ -1,0 +1,6 @@
+<launch>
+  <!-- turtlebot_teleop_key already has its own built in velocity smoother -->
+  <node pkg="feature_tracker" type="feature_tracker_node.py" name="feature_tracker"  output="screen">
+    <param name="config_path" value="$(find feature_tracker)/config/config.yaml"/>
+  </node>
+</launch>

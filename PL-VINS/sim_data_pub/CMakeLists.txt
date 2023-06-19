@@ -5,7 +5,7 @@ set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++11")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
-set(cv_bridge_DIR "/home/nvidia/cv_bridge_ws/devel/share/cv_bridge/cmake")
+# set(cv_bridge_DIR "/home/nvidia/cv_bridge_ws/devel/share/cv_bridge/cmake")
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     std_msgs
@@ -13,8 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
     cv_bridge
     )
 
-Set(OpenCV_DIR "/home/nvidia/package/opencv-3.2.0/build")
-find_package(OpenCV 3.2 REQUIRED)
+# Set(OpenCV_DIR "/home/nvidia/package/opencv-3.2.0/build")
+find_package(OpenCV REQUIRED)
 
 catkin_package()
 

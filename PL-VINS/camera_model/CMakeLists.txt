@@ -13,9 +13,9 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED COMPONENTS filesystem program_options system)
 include_directories(${Boost_INCLUDE_DIRS})
 
-#find_package(OpenCV REQUIRED)
-Set(OpenCV_DIR "/home/nvidia/package/opencv-3.2.0/build") # important find opencv version
-find_package(OpenCV 3.2 QUIET)
+find_package(OpenCV REQUIRED)
+# Set(OpenCV_DIR "/home/nvidia/package/opencv-3.2.0/build") # important find opencv version
+# find_package(OpenCV 3.2 QUIET)
 
 # set(EIGEN_INCLUDE_DIR "/usr/local/include/eigen3")
 find_package(Ceres REQUIRED)

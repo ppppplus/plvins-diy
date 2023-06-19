@@ -16,8 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
     )
 
 
-Set(OpenCV_DIR "/home/nvidia/package/opencv-3.2.0/build") # important find opencv version
-find_package(OpenCV 3.2 QUIET)
+# Set(OpenCV_DIR "/home/nvidia/package/opencv-3.2.0/build") # important find opencv version
+find_package(OpenCV)
 
 find_package(Ceres REQUIRED)
 

@@ -246,7 +246,7 @@ void process()
 {
     while (true)
     {
-        // 获取三种数据：imu/feature/linefeature
+        // 获取三种数据：imu/feature/linefeature，放到measurements里
         //std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>, sensor_msgs::PointCloudConstPtr>> measurements;
         std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>,
                 std::pair<sensor_msgs::PointCloudConstPtr,sensor_msgs::PointCloudConstPtr> >> measurements;
@@ -260,12 +260,13 @@ void process()
         for (auto &measurement : measurements)
         {
             for (auto &imu_msg : measurement.first)
-                send_imu(imu_msg);                     // 处理imu数据, 预测 pose
+                send_imu(imu_msg);                     // 处理imu数据, 发送给estimator，预测 pose
 
             // set relocalization frame
             sensor_msgs::PointCloudConstPtr relo_msg = NULL;
             while (!relo_buf.empty())
             {
+                // 取出一个重定位的msg
                 relo_msg = relo_buf.front();
                 relo_buf.pop();
             }
@@ -286,7 +287,7 @@ void process()
                 Matrix3d relo_r = relo_q.toRotationMatrix();
                 int frame_index;
                 frame_index = relo_msg->channels[0].values[7];
-                estimator.setReloFrame(frame_stamp, frame_index, match_points, relo_t, relo_r);
+                estimator.setReloFrame(frame_stamp, frame_index, match_points, relo_t, relo_r); // 将重定位关键帧的信息发送给estimator
             }
 
 
@@ -299,6 +300,7 @@ void process()
             map<int, vector<pair<int, Vector3d>>> image;
             map<int, vector<pair<int, Vector4d>>> image1;
             map<int, vector<pair<int, Matrix<double, 5, 1>>>> image2;
+            // 处理点特征
             for (unsigned int i = 0; i < img_msg->points.size(); i++)
             {
                 int v = img_msg->channels[0].values[i] + 0.5;
@@ -333,7 +335,8 @@ void process()
             //     ROS_ASSERT(z == 1);
             //     image[feature_id].emplace_back(camera_id, xyz_uv);
             // }
-            map<int, vector<pair<int, Vector4d>>> lines;
+            // 处理线特征map（int,(int,vector4d)）
+            map<int, vector<pair<int, Vector4d>>> lines;    // 存储线特征的字典
             for (unsigned int i = 0; i < line_msg->points.size(); i++)
             {
                 int v = line_msg->channels[0].values[i] + 0.5;
@@ -348,7 +351,7 @@ void process()
                 lines[feature_id].emplace_back(camera_id, Vector4d(x_startpoint, y_startpoint, x_endpoint, y_endpoint));
             }
             // estimator.processImage(image,lines, img_msg->header);   // 处理image数据，这时候的image已经是特征点数据，不是原始图像了。
-            estimator.processImage(image2,lines, img_msg->header);   // 处理image数据，这时候的image已经是特征点数据，不是原始图像了。
+            estimator.processImage(image2, lines, img_msg->header);   // 处理image数据，这时候的image已经是特征点数据，不是原始图像了。
 
             double whole_t = t_s.toc();
             printStatistics(estimator, whole_t);
@@ -391,13 +394,13 @@ int main(int argc, char **argv)
     ROS_DEBUG("EIGEN_DONT_PARALLELIZE");
 #endif
     ROS_WARN("waiting for image and imu...");
-
+    // 注册话题发布者
     registerPub(n);
 
     // 监听imu数据和点/线特征提取节点发布的特征图
-    ros::Subscriber sub_imu = n.subscribe(IMU_TOPIC, 2000, imu_callback, ros::TransportHints().tcpNoDelay());
+    ros::Subscriber sub_imu = n.subscribe(IMU_TOPIC, 2000, imu_callback, ros::TransportHints().tcpNoDelay());   // 用低延迟tcp来监听
     ros::Subscriber sub_image = n.subscribe("/feature_tracker/feature", 2000, feature_callback);
-    ros::Subscriber sub_linefeature = n.subscribe("/linefeature_tracker/linefeature", 2000, linefeature_callback);
+    ros::Subscriber sub_linefeature = n.subscribe("/linefeature_tracker/linefeature", 2000, linefeature_callback);  // 这两步往缓冲区中加入了点线feature，等待process处理
     // ros::Subscriber sub_raw_image = n.subscribe(IMAGE_TOPIC, 2000, raw_image_callback);
 
     // ros::Subscriber sub_relo_points = n.subscribe("/pose_graph/match_points", 2000, relocalization_callback);
