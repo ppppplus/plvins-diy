@@ -9,7 +9,9 @@ from .misc.geometry_utils import keypoints_to_grid
 
 class MyLinefeatureExtractModel():
     def __init__(self, num_samples=10, min_dist_pts=8, grid_size=8, sampling="regular", line_score=False):
+        device = 'cuda' if torch.cuda.is_available() is True else 'cpu'
         self.net = SOLD2(pretrained=True)
+        self.net = self.net.to(device)
         self.sampling_mode = sampling
         self.num_samples = num_samples
         self.min_dist_pts = min_dist_pts
@@ -18,12 +20,12 @@ class MyLinefeatureExtractModel():
         
     def extractLines(self, img):
         img = (img / 255.).astype(float)
-        img_size = img.shape
+        img_size = img.shape    # 480*752
         torch_img = torch.tensor(img, dtype=torch.float)[None, None].cuda()
         with torch.no_grad():
             out = self.net(torch_img)
-        vecline= out["line_segments"][0].cpu().numpy()
-        desc = out["dense_desc"][0]
+        vecline= out["line_segments"][0].cpu().numpy()  
+        desc = out["dense_desc"] # 1*128*img_size/grid_size
         # 参照line_matching中的函数做描述子和线之间的对应
         if self.sampling_mode == "regular":
             line_points, valid_points = self.sample_line_points(vecline)  
@@ -32,13 +34,13 @@ class MyLinefeatureExtractModel():
                 vecline, desc, img_size, self.sampling_mode)
 
         line_points = torch.tensor(line_points.reshape(-1, 2),
-                                    dtype=torch.float, device=desc.device) 
+                                    dtype=torch.float, device=desc.device)
         # Extract the descriptors for each point
         grid = keypoints_to_grid(line_points, img_size)
         desc = F.normalize(F.grid_sample(desc, grid)[0, :, :, 0], dim=0)
-        desc = desc.reshape((-1, len(vecline), self.num_samples)) # reshape为每个线段对应的desc,128*num_line*num_samples
+        desc = desc.reshape((-1, len(vecline), self.num_samples)) # reshape为每个线段对应的desc,128*num_lines*num_samples
 
-        return vecline, desc, valid_points
+        return vecline, desc, valid_points  # num_lines*2*2; 128*num_lines*num_samples; num_lines*5
     
     def sample_salient_points(self, line_seg, desc, img_size,
                               saliency_type='d2_net'):
@@ -207,6 +209,8 @@ class MyLinefeatureMatchModel():
         if len(vecline2) == 0:
             return -np.ones(len(vecline1), dtype=int)
         desc1 = desc1.reshape((128,-1))
+        desc2 = desc2.reshape((128,-1))
+
 
         # Precompute the distance between line points for every pair of lines
         # Assign a score of -1 for unvalid points
@@ -229,7 +233,7 @@ class MyLinefeatureMatchModel():
             matches[~mutual] = -1
         index_lines1 = np.arange(vecline1.shape[0])
         valid_matches = matches != -1
-        index_lines1 = index_lines1[valid_matches][:, :, ::-1]
+        index_lines1 = index_lines1[valid_matches]
         index_lines2 = matches[valid_matches]
         # matched_lines2 = vecline2[match_indices][:, :, ::-1]
         return index_lines1, index_lines2

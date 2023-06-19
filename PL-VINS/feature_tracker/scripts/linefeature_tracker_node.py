@@ -6,7 +6,7 @@
 import cv2
 
 import copy
-# import rospy
+import rospy
 import torch
 import yaml
 
@@ -65,19 +65,19 @@ def img_callback(img_msg, linefeature_tracker):
             feature_lines.header = img_msg.header
             feature_lines.header.frame_id = "world"
 
-            cur_un_lines, cur_lines, ids = linefeature_tracker.undistortedLineEndPoints( scale=2 )
+            cur_un_vecline, cur_vecline, ids = linefeature_tracker.undistortedLineEndPoints()
 
             for j in range(len(ids)):
                 un_pts = Point32()
-                un_pts.x = cur_un_lines[0,j]
-                un_pts.y = cur_un_lines[1,j]
+                un_pts.x = cur_un_vecline[j,0,0]
+                un_pts.y = cur_un_vecline[j,0,1]
                 un_pts.z = 1
 
                 # 向建立的点云消息中加入line信息
                 feature_lines.points.append(un_pts)
                 id_of_line.values.append(ids[j])
-                u_of_endpoint.values.append(cur_lines[0,j])
-                v_of_endpoint.values.append(cur_lines[1,j])
+                u_of_endpoint.values.append(cur_un_vecline[j,1,0])
+                v_of_endpoint.values.append(cur_un_vecline[j,1,1])
                 velocity_x_of_line.values.append(0.0)
                 velocity_y_of_line.values.append(0.0)
 
@@ -98,9 +98,9 @@ def img_callback(img_msg, linefeature_tracker):
 
             ptr_image = bridge.imgmsg_to_cv2(img_msg, "bgr8")
 
-            for pt1, pt2 in zip(cur_un_lines.T, cur_lines.T):
-                pt1 = (int(round(pt1[0])), int(round(pt1[1])))
-                pt2 = (int(round(pt2[0])), int(round(pt2[1])))
+            for j in range(len(ids)):
+                pt1 = (int(round(cur_vecline[j,0,0])), int(round(cur_vecline[j,0,1])))
+                pt2 = (int(round(cur_vecline[j,1,0])), int(round(cur_vecline[j,1,1])))
                 # cv2.circle(ptr_image, pt2, 2, (0, 255, 0), thickness=2)
                 cv2.line(ptr_image, pt1, pt2, (0, 0, 255), 2)
 
@@ -111,14 +111,14 @@ def img_callback(img_msg, linefeature_tracker):
 
 if __name__ == '__main__':
 
-    # rospy.init_node('linefeature_tracker', anonymous=False)
+    rospy.init_node('linefeature_tracker', anonymous=False)
     
-    yamlPath = 'config.yaml'
+    yamlPath = '/home/nvidia/plvins_ws/src/PL-VINS/feature_tracker/config/config.yaml'
     with open(yamlPath,'rb') as f:
       # yaml文件通过---分节，多个节组合成一个列表
       params = yaml.load(f, Loader=yaml.FullLoader)
-    my_line_extract_model = MyLinefeatureExtractModel(yamlPath)  # 利用参数文件建立自定义线特征模型
-    my_line_match_model = MyLinefeatureMatchModel(nn_thresh=0.7)
+    my_line_extract_model = MyLinefeatureExtractModel(params["line_feature_cfg"]["num_samples"], params["line_feature_cfg"]["min_dist_pts"], params["line_feature_cfg"]["grid_size"])  # 利用参数文件建立自定义线特征模型
+    my_line_match_model = MyLinefeatureMatchModel(**params["line_feature_cfg"])
     # Option_Param = readParameters()
     # print(Option_Param)
 
@@ -131,7 +131,8 @@ if __name__ == '__main__':
     #       fx = 349.199951171875, fy = 349.199951171875, cx = 322.2005615234375, cy = 246.161865234375, 
     #       k1 = -0.2870635986328125, k2 = 0.06902313232421875, p1 = 0.000362396240234375, p2 = 0.000701904296875
     #       )
-    linefeature_tracker = LineFeatureTracker(my_line_extract_model, my_line_match_model, CamearIntrinsicParam) # 利用点特征模型和相机模型生成点特征处理器
+    linefeature_tracker = LineFeatureTracker(my_line_extract_model, my_line_match_model, CamearIntrinsicParam, 
+                                             num_samples=params["line_feature_cfg"]["num_samples"], max_cnt=100) # 利用点特征模型和相机模型生成点特征处理器
 
     #   sub_img = rospy.Subscriber("/mynteye/left/image_color", Image, img_callback, FeatureParameters,  queue_size=100)
     sub_img = rospy.Subscriber("/cam0/image_raw", Image, img_callback, linefeature_tracker,  queue_size=100) # 监听图像，提取和追踪点特征并发布

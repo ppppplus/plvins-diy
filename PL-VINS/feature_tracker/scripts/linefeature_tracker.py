@@ -4,6 +4,7 @@
 import cv2
 import copy
 import numpy as np 
+import torch
 from time import time
 
 # from utils.PointTracker import PointTracker
@@ -26,20 +27,29 @@ myjet = np.array([[0.        , 0.        , 0.5       ],
 class LineFeatureTracker:
 	def __init__(self, extract_model, match_model, cams, num_samples=8, max_cnt=150):
 		# extract_model为自定义点特征模型类，其中提供extract方法接受一个图像输入，输出线特征信息（lines, lens）
+		self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 		self.extractor = extract_model
 		self.matcher = match_model
 		self.num_samples = num_samples
 		# frame_仿照源码中的FrameLines，含有frame_id, img, vecline, lineID, keylsd, lbd_descr六个属性
 		self.forwframe_ = {
 				'frame_id': None, 
-				'vecline': [],
+				'vecline': np.zeros((0,2,2)),
 				'lineID': None,
 				# 'keylsd': None,
-				'descriptor': np.zeros((128,0)),
+				'descriptor': torch.zeros((128,0)).to(self.device),
 				'valid_points': None,	# 存储哪些线采样点为有效的
 				'image': None,
 				}
-
+		self.curframe_ = {
+				'frame_id': None, 
+				'vecline': np.zeros((0,2,2)),
+				'lineID': None,
+				# 'keylsd': None,
+				'descriptor': torch.zeros((128,0)).to(self.device),
+				'valid_points': None,	# 存储哪些线采样点为有效的
+				'image': None,
+				}
 		# self.forwframe_ = {
 		# 		'frame_id': None, 
 		# 		'vecline': [],
@@ -76,18 +86,22 @@ class LineFeatureTracker:
 		
 		# self.tracker = PointTracker(nn_thresh=self.nn_thresh)
 
-	def undistortedLineEndPoints(self, scale):
+	def undistortedLineEndPoints(self):
 
-		cur_un_pts = copy.deepcopy(self.curframe_['keyPoint'])
-		ids = copy.deepcopy(self.curframe_['PointID'])
-		cur_pts = copy.deepcopy(cur_un_pts * scale)
+		cur_un_vecline = copy.deepcopy(self.curframe_['vecline'])
+		cur_vecline = copy.deepcopy(self.curframe_['vecline'])
+		ids = copy.deepcopy(self.curframe_['lineID'])
+		
 
-		for i in range(cur_pts.shape[1]):
-			b = self.camera.liftProjective(cur_pts[:2,i])
-			cur_un_pts[0,i] = b[0] / b[2]
-			cur_un_pts[1,i] = b[1] / b[2]
+		for i in range(cur_vecline.shape[0]):
+			b0 = self.camera.liftProjective(cur_vecline[i,0,:])
+			b1 = self.camera.liftProjective(cur_vecline[i,1,:])
+			cur_un_vecline[i,0,0] = b0[0] / b0[2]
+			cur_un_vecline[i,0,1] = b0[1] / b0[2]
+			cur_un_vecline[i,1,0] = b1[0] / b1[2]
+			cur_un_vecline[i,1,1] = b1[1] / b1[2]
 
-		return cur_un_pts, cur_pts, ids
+		return cur_un_vecline, cur_vecline, ids
 
 
 	def readImage(self, new_img):
@@ -145,7 +159,7 @@ class LineFeatureTracker:
 									self.curframe_['descriptor'][None,...],
 									self.forwframe_['valid_points'],
 									self.curframe_['valid_points']
-							).astype(int)
+							)
 			global match_time
 			match_time += time()-start_time
 			print("match time is :", match_time)
@@ -157,44 +171,44 @@ class LineFeatureTracker:
 			################### 将跟踪的线与没跟踪的线进行区分 #####################
 			vecline_new = np.zeros((0,2,2))
 			vecline_tracked = np.zeros((0,2,2))
-			validpoints_new = np.zeros((0,self.num_samples))
-			validpoints_tracked = np.zeros((0,self.num_samples))
+			validpoints_new = np.zeros((0,self.num_samples)).astype(int)
+			validpoints_tracked = np.zeros((0,self.num_samples)).astype(int)
 			lineID_new = []
 			lineID_tracked = []
-			descr_new = np.zeros((128,0,self.num_samples))
-			descr_tracked = np.zeros((128,0,self.num_samples))
+			descr_new = torch.zeros((128,0,self.num_samples)).to(self.device)
+			descr_tracked = torch.zeros((128,0,self.num_samples)).to(self.device)
 
 			for i in range(lines_num):
 				if self.forwframe_['lineID'][i] == -1 :	# -1表示当前ID对应的line没有track到
 					self.forwframe_['lineID'][i] = self.allfeature_cnt	# 没有跟踪到的线则编号为新的
 					self.allfeature_cnt = self.allfeature_cnt+1
-					vecline_new = np.append((vecline_new, self.forwframe_['vecline'][i:i+1,...]), axis=0)	# 取出没有跟踪到的线信息并放入下一帧
+					vecline_new = np.append(vecline_new, self.forwframe_['vecline'][i:i+1,...], axis=0)	# 取出没有跟踪到的线信息并放入下一帧
 					lineID_new.append(self.forwframe_['lineID'][i])
-					descr_new = np.append(descr_new, self.forwframe_['descriptor'][:,i:i+1,:], axis=0)
+					descr_new = torch.cat((descr_new, self.forwframe_['descriptor'][:,i:i+1,:]), dim=1)
 					validpoints_new = np.append(validpoints_new, self.forwframe_['valid_points'][i:i+1,:], axis=0)
 				else:
 					# 当前line已被track
 					lineID_tracked.append(self.forwframe_['lineID'][i])
 					vecline_tracked = np.append(vecline_tracked, self.forwframe_['vecline'][i:i+1,...], axis=0)
-					descr_tracked = np.append(descr_tracked, self.forwframe_['descriptor'][:,i:i+1,:], axis=0)
+					descr_tracked = torch.cat((descr_tracked, self.forwframe_['descriptor'][:,i:i+1,:]), dim=1)
 					validpoints_tracked = np.append(validpoints_tracked, self.forwframe_['valid_points'][i:i+1,:], axis=0)
 
 
-			########### 跟踪的线特征少于150了，那就补充新的线特征 ###############
+			########### 跟踪的线特征少了，那就补充新的线特征 ###############
 
-			diff_n = self.max_cnt - vecline_tracked.shape[1]
+			diff_n = self.max_cnt - vecline_tracked.shape[0]
 			if diff_n > 0:
-				if vecline_new.shape[1] >= diff_n:
+				if vecline_new.shape[0] >= diff_n:
 					for k in range(diff_n):
-						vecline_tracked = np.append(vecline_tracked, vecline_new[k:k+1,:], axis=1)
+						vecline_tracked = np.append(vecline_tracked, vecline_new[k:k+1,:], axis=0)
 						lineID_tracked.append(lineID_new[k])
-						descr_tracked = np.append(descr_tracked, descr_new[:,k:k+1], axis=1)
+						descr_tracked = torch.cat((descr_tracked, descr_new[:,k:k+1,:]), dim=1)
 						validpoints_tracked = np.append(validpoints_tracked, validpoints_new[k:k+1,:],axis=0)
 				else:
-					for k in range(vecline_new.shape[1]):
-						vecline_tracked = np.append(vecline_tracked, vecline_new[k:k+1,:], axis=1)
+					for k in range(vecline_new.shape[0]):
+						vecline_tracked = np.append(vecline_tracked, vecline_new[k:k+1,:], axis=0)
 						lineID_tracked.append(lineID_new[k])
-						descr_tracked = np.append(descr_tracked, descr_new[:,k:k+1], axis=1)
+						descr_tracked = torch.cat((descr_tracked, descr_new[:,k:k+1,:]), dim=1)
 						validpoints_tracked = np.append(validpoints_tracked, validpoints_new[k:k+1,:],axis=0)
 						
 			self.forwframe_['vecline'] = vecline_tracked

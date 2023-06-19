@@ -29,6 +29,7 @@ class PinholeCamera:
         return (d_u0, d_u1)
 
     def liftProjective(self, p):
+        # convert pixel coord to normalized coord w/o distortion
         m_inv_K11 = 1.0 / self.fx
         m_inv_K13 = -self.cx / self.fx
         m_inv_K22 = 1.0 / self.fy
