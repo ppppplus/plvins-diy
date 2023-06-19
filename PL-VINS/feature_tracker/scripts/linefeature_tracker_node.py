@@ -6,8 +6,9 @@
 import cv2
 
 import copy
-import rospy
+# import rospy
 import torch
+import yaml
 
 import numpy as np
 from cv_bridge import CvBridge
@@ -110,8 +111,12 @@ def img_callback(img_msg, linefeature_tracker):
 
 if __name__ == '__main__':
 
-    rospy.init_node('linefeature_tracker', anonymous=False)
+    # rospy.init_node('linefeature_tracker', anonymous=False)
+    
     yamlPath = 'config.yaml'
+    with open(yamlPath,'rb') as f:
+      # yaml文件通过---分节，多个节组合成一个列表
+      params = yaml.load(f, Loader=yaml.FullLoader)
     my_line_extract_model = MyLinefeatureExtractModel(yamlPath)  # 利用参数文件建立自定义线特征模型
     my_line_match_model = MyLinefeatureMatchModel(nn_thresh=0.7)
     # Option_Param = readParameters()

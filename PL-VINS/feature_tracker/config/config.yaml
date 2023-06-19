@@ -18,3 +18,9 @@ cuda: false # Use cuda GPU to speed up network processing speed
 no_display: false
 write: true    # Save output frames to a directory
 write_dir: 'tracker_outputs/'
+line_matcher_cfg:
+        cross_check: True
+        num_samples: 5
+        min_dist_pts: 8
+        top_k_candidates: 10
+        grid_size: 4

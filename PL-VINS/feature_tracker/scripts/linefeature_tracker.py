@@ -169,14 +169,16 @@ class LineFeatureTracker:
 					self.forwframe_['lineID'][i] = self.allfeature_cnt	# 没有跟踪到的线则编号为新的
 					self.allfeature_cnt = self.allfeature_cnt+1
 					vecline_new = np.append((vecline_new, self.forwframe_['vecline'][i:i+1,...]), axis=0)	# 取出没有跟踪到的线信息并放入下一帧
-					lineID_new.append(self.forwframe_['lineID'][i:i+1])
+					lineID_new.append(self.forwframe_['lineID'][i])
 					descr_new = np.append(descr_new, self.forwframe_['descriptor'][:,i:i+1,:], axis=0)
-					validpoints_new = np.append(validpoints_new, self.forwframe_['valid_points'][i:i+1,:], axis=1)
+					validpoints_new = np.append(validpoints_new, self.forwframe_['valid_points'][i:i+1,:], axis=0)
 				else:
 					# 当前line已被track
-					lineID_tracked.append(self.forwframe_['lineID'][i:i+1])
+					lineID_tracked.append(self.forwframe_['lineID'][i])
 					vecline_tracked = np.append(vecline_tracked, self.forwframe_['vecline'][i:i+1,...], axis=0)
 					descr_tracked = np.append(descr_tracked, self.forwframe_['descriptor'][:,i:i+1,:], axis=0)
+					validpoints_tracked = np.append(validpoints_tracked, self.forwframe_['valid_points'][i:i+1,:], axis=0)
+
 
 			########### 跟踪的线特征少于150了，那就补充新的线特征 ###############
 
@@ -184,18 +186,21 @@ class LineFeatureTracker:
 			if diff_n > 0:
 				if vecline_new.shape[1] >= diff_n:
 					for k in range(diff_n):
-						vecline_tracked = np.append(vecline_tracked, vecline_new[:,k:k+1], axis=1)
-						vecline_tracked.append(lineID_new[k])
-						descr_tracked = np.append(descr_tracked, descr_new[:,k:k+1], axis=1)
-				else:
-					for k in range(vecline_new.shape[1]):
-						vecline_tracked = np.append(vecline_tracked, vecline_new[:,k:k+1], axis=1)
+						vecline_tracked = np.append(vecline_tracked, vecline_new[k:k+1,:], axis=1)
 						lineID_tracked.append(lineID_new[k])
 						descr_tracked = np.append(descr_tracked, descr_new[:,k:k+1], axis=1)
-			
+						validpoints_tracked = np.append(validpoints_tracked, validpoints_new[k:k+1,:],axis=0)
+				else:
+					for k in range(vecline_new.shape[1]):
+						vecline_tracked = np.append(vecline_tracked, vecline_new[k:k+1,:], axis=1)
+						lineID_tracked.append(lineID_new[k])
+						descr_tracked = np.append(descr_tracked, descr_new[:,k:k+1], axis=1)
+						validpoints_tracked = np.append(validpoints_tracked, validpoints_new[k:k+1,:],axis=0)
+						
 			self.forwframe_['vecline'] = vecline_tracked
 			self.forwframe_['lineID'] = lineID_tracked
 			self.forwframe_['descriptor'] = descr_tracked
+			self.forwframe_['valid_points'] = validpoints_tracked
 
 		# if not self.no_display :	
 		# 	out1 = (np.dstack((self.curframe_['image'], self.curframe_['image'], self.curframe_['image'])) * 255.).astype('uint8')
