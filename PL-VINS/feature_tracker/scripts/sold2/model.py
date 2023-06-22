@@ -8,20 +8,20 @@ from .misc.geometry_utils import keypoints_to_grid
 
 
 class MyLinefeatureExtractModel():
-    def __init__(self, num_samples=10, min_dist_pts=8, grid_size=8, sampling="regular", line_score=False):
-        device = 'cuda' if torch.cuda.is_available() is True else 'cpu'
+    def __init__(self, params):
+        self.device = 'cuda' if torch.cuda.is_available() is True else 'cpu'
         self.net = SOLD2(pretrained=True)
-        self.net = self.net.to(device)
-        self.sampling_mode = sampling
-        self.num_samples = num_samples
-        self.min_dist_pts = min_dist_pts
-        self.grid_size = grid_size
-        self.line_score = line_score
+        self.net = self.net.to(self.device)
+        self.sampling_mode = params["sampling"]
+        self.num_samples = params["num_samples"]
+        self.min_dist_pts = params["min_dist_pts"]
+        self.grid_size = params["grid_size"]
+        self.line_score = params["line_score"]
         
     def extractLines(self, img):
         img = (img / 255.).astype(float)
         img_size = img.shape    # 480*752
-        torch_img = torch.tensor(img, dtype=torch.float)[None, None].cuda()
+        torch_img = torch.tensor(img, dtype=torch.float)[None, None].to(self.device)
         with torch.no_grad():
             out = self.net(torch_img)
         vecline= out["line_segments"][0].cpu().numpy()  
@@ -34,7 +34,7 @@ class MyLinefeatureExtractModel():
                 vecline, desc, img_size, self.sampling_mode)
 
         line_points = torch.tensor(line_points.reshape(-1, 2),
-                                    dtype=torch.float, device=desc.device)
+                                    dtype=torch.float, device=self.device)
         # Extract the descriptors for each point
         grid = keypoints_to_grid(line_points, img_size)
         desc = F.normalize(F.grid_sample(desc, grid)[0, :, :, 0], dim=0)
@@ -56,7 +56,6 @@ class MyLinefeatureExtractModel():
             line_points: an Nxnum_samplesx2 np.array.
             valid_points: a boolean Nxnum_samples np.array.
         """
-        device = desc.device
         if not self.line_score:
             # Compute the score map
             if saliency_type == "d2_net":
@@ -93,7 +92,7 @@ class MyLinefeatureExtractModel():
                                        axis=-1).reshape(-1, 2)
             # cur_line_points is of shape (n_cur_lines * sample_rate, 2)
             cur_line_points = torch.tensor(cur_line_points, dtype=torch.float,
-                                           device=device)
+                                           device=self.device)
             grid_points = keypoints_to_grid(cur_line_points, img_size)
 
             if self.line_score:
@@ -179,19 +178,17 @@ class MyLinefeatureExtractModel():
         return line_points, valid_points
 
 class MyLinefeatureMatchModel():
-    def __init__(self, cross_check=True, num_samples=10, min_dist_pts=8,
-                 top_k_candidates=10, grid_size=8, sampling="regular",
-                 line_score=False):
+    def __init__(self, params):
         # self.net = WunschLineMatcher(**line_matcher_cfg)
-        self.cross_check = cross_check
-        self.num_samples = num_samples
-        self.min_dist_pts = min_dist_pts
-        self.top_k_candidates = top_k_candidates
-        self.grid_size = grid_size
-        self.line_score = line_score  # True to compute saliency on a line
-        self.sampling_mode = sampling
-        if sampling not in ["regular", "d2_net", "asl_feat"]:
-            raise ValueError("Wrong sampling mode: " + sampling)
+        self.cross_check = params["cross_check"]
+        self.num_samples = params["num_samples"]
+        self.min_dist_pts = params["min_dist_pts"]
+        self.top_k_candidates = params["top_k_candidates"]
+        self.grid_size = params["grid_size"]
+        self.line_score = params["line_score"]  # True to compute saliency on a line
+        self.sampling_mode = params["sampling"]
+        if self.sampling_mode not in ["regular", "d2_net", "asl_feat"]:
+            raise ValueError("Wrong sampling mode: " + self.sampling_mode)
 
     def match(self, vecline1, vecline2, desc1, desc2, valid1, valid2):
         # matches = self.net.forward(vecline1, vecline2, desc1, desc2)

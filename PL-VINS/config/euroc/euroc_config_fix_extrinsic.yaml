@@ -2,7 +2,7 @@
 
 #common parameters
 imu_topic: "/imu0"
-image_topic: "/cam0/image_raw"
+# image_topic: "/cam0/image_raw"
 output_path: "/home/nvidia/catkin_plvins/src/PL-VINS/Trajactory"         # vins outputs will be wrttento vins_folder_path + output_path
 
 #camera calibration 

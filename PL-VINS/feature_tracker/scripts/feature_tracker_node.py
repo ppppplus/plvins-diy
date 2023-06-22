@@ -8,6 +8,7 @@ import os, sys
 import copy
 import rospy
 import torch
+import yaml
 
 import numpy as np
 from cv_bridge import CvBridge
@@ -22,14 +23,16 @@ from utils.parameter import read_image
 from utils.camera_model import PinholeCamera
 from feature_tracker import FeatureTracker
 
-from superpoint.superpoint import MyExtractModel # 导入自定义点特征模型
-from utils.PointTracker import PointTracker
+from superpoint.model import MyPointExtractModel
+from superpoint.model import MyPointMatchModel
 
 init_pub = False
 count_frame = 0
 
-def img_callback(img_msg, feature_tracker):
-
+def img_callback(img_msg, params_dict):
+    feature_tracker = params_dict["feature_tracker"]
+    height = params_dict["H"]
+    width = params_dict["W"]
     global init_pub
     global count_frame
 
@@ -40,15 +43,8 @@ def img_callback(img_msg, feature_tracker):
 
         bridge = CvBridge()
         conver_img = bridge.imgmsg_to_cv2(img_msg, "mono8")
-
-        # cur_img, status = read_image(conver_img, [param.height, param.width])
-
-        # if status is False:
-        #     print("Load image error, Please check image_info topic")
-        #     return
-        height = 120
-        width = 160
-        scale = 2
+        
+        # scale = 2
         feature_tracker.readImage(conver_img)
 
         if True :
@@ -62,7 +58,7 @@ def img_callback(img_msg, feature_tracker):
             feature_points.header = img_msg.header
             feature_points.header.frame_id = "world"
 
-            cur_un_pts, cur_pts, ids = feature_tracker.undistortedLineEndPoints( scale=2 )
+            cur_un_pts, cur_pts, ids = feature_tracker.undistortedPoints()
 
             for j in range(len(ids)):
                 un_pts = Point32()
@@ -88,8 +84,8 @@ def img_callback(img_msg, feature_tracker):
             ptr_toImageMsg = Image()
 
             ptr_toImageMsg.header = img_msg.header
-            ptr_toImageMsg.height = height * scale
-            ptr_toImageMsg.width = width * scale
+            ptr_toImageMsg.height = height
+            ptr_toImageMsg.width = width
             ptr_toImageMsg.encoding = 'bgr8'
 
             ptr_image = bridge.imgmsg_to_cv2(img_msg, "bgr8")
@@ -106,17 +102,13 @@ def img_callback(img_msg, feature_tracker):
 if __name__ == '__main__':
 
     rospy.init_node('feature_tracker', anonymous=False)
-    # print(os.getcwd())
-    # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    # print(sys.path)
-    # yamlPath = os.path.abspath('config.yaml')
-    # print(yamlPath)
-    yamlPath = rospy.get_param("~config_path")
-    print(yamlPath)
-    my_extract_model = MyExtractModel(yamlPath)  # 利用参数文件建立自定义点特征模型
-    my_track_model = PointTracker(nn_thresh=0.7)
-    # Option_Param = readParameters()
-    # print(Option_Param)
+    yamlPath = rospy.get_param("~config_path", "/home/plus/Work/plvins_ws/src/PL-VINS/feature_tracker/config/config.yaml")
+    with open(yamlPath,'rb') as f:
+      params = yaml.load(f, Loader=yaml.FullLoader)
+      point_params = params["point_feature_cfg"]
+
+    my_point_extract_model = MyPointExtractModel(point_params)  # 利用参数文件建立自定义点特征模型
+    my_point_match_model = MyPointMatchModel(point_params)
 
     CamearIntrinsicParam = PinholeCamera(
         fx = 461.6, fy = 460.3, cx = 363.0, cy = 248.1, 
@@ -127,13 +119,17 @@ if __name__ == '__main__':
     #       fx = 349.199951171875, fy = 349.199951171875, cx = 322.2005615234375, cy = 246.161865234375, 
     #       k1 = -0.2870635986328125, k2 = 0.06902313232421875, p1 = 0.000362396240234375, p2 = 0.000701904296875
     #       )
-    feature_tracker = FeatureTracker(my_extract_model, my_track_model, CamearIntrinsicParam) # 利用点特征模型和相机模型生成点特征处理器
-
-    #   sub_img = rospy.Subscriber("/mynteye/left/image_color", Image, img_callback, FeatureParameters,  queue_size=100)
-    sub_img = rospy.Subscriber("/cam0/image_raw", Image, img_callback, feature_tracker,  queue_size=100) # 监听图像，提取和追踪点特征并发布
+    feature_tracker = FeatureTracker(my_point_extract_model, my_point_match_model, 
+                                     CamearIntrinsicParam, min_cnt=point_params["min_cnt"]) # 利用点特征模型和相机模型生成点特征处理器
     
+    image_topic = params["image_topic"]
+    rospy.loginfo("Pointfeature Tracker initialization completed, waiting for img from topic: %s", image_topic)
 
-    pub_img = rospy.Publisher("feature", PointCloud, queue_size=1000)
-    pub_match = rospy.Publisher("feature_img", Image, queue_size=1000)
+    sub_img = rospy.Subscriber(image_topic, Image, img_callback, 
+                               {"feature_tracker": feature_tracker, "H": point_params["H"], "W": point_params["W"]}, 
+                               queue_size=100) # 监听图像，提取和追踪点特征并发布
+
+    pub_img = rospy.Publisher("~feature", PointCloud, queue_size=1000)
+    pub_match = rospy.Publisher("~feature_img", Image, queue_size=1000)
 
     rospy.spin()

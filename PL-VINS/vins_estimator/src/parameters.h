@@ -48,6 +48,8 @@ extern std::string CAM_NAMES;
 extern std::string IMAGE_TOPIC;
 extern std::string IMU_TOPIC;
 
+extern std::string DATASET_NAME;
+
 void readParameters(ros::NodeHandle &n);
 
 enum SIZE_PARAMETERIZATION

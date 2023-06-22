@@ -24,18 +24,20 @@ from utils.camera_model import PinholeCamera
 from linefeature_tracker import LineFeatureTracker
 
 from sold2.model import MyLinefeatureExtractModel, MyLinefeatureMatchModel # 导入自定义线特征模型
-from utils.PointTracker import PointTracker
+# from utils.PointTracker import PointTracker
 
 init_pub = False
 count_frame = 0
 
-def img_callback(img_msg, linefeature_tracker):
+def img_callback(img_msg, params_dict):
     # 处理传入的图像，提取线特征
     # 输入：图像msg和线特征提取器
     # 输出：无返回值，发布线特征PointCloud
     global init_pub
     global count_frame
-
+    linefeature_tracker = params_dict["feature_tracker"]
+    height = params_dict["H"]
+    width = params_dict["W"]
     if not init_pub :
         init_pub = True
     else :
@@ -49,9 +51,8 @@ def img_callback(img_msg, linefeature_tracker):
         # if status is False:
         #     print("Load image error, Please check image_info topic")
         #     return
-        height = 120
-        width = 160
-        scale = 2
+        
+        # scale = 2
         linefeature_tracker.readImage(conver_img)
 
         if True :
@@ -92,15 +93,15 @@ def img_callback(img_msg, linefeature_tracker):
             ptr_toImageMsg = Image()
 
             ptr_toImageMsg.header = img_msg.header
-            ptr_toImageMsg.height = height * scale
-            ptr_toImageMsg.width = width * scale
+            ptr_toImageMsg.height = height 
+            ptr_toImageMsg.width = width
             ptr_toImageMsg.encoding = 'bgr8'
 
             ptr_image = bridge.imgmsg_to_cv2(img_msg, "bgr8")
 
             for j in range(len(ids)):
-                pt1 = (int(round(cur_vecline[j,0,0])), int(round(cur_vecline[j,0,1])))
-                pt2 = (int(round(cur_vecline[j,1,0])), int(round(cur_vecline[j,1,1])))
+                pt1 = (int(round(cur_vecline[j,0,1])), int(round(cur_vecline[j,0,0])))
+                pt2 = (int(round(cur_vecline[j,1,1])), int(round(cur_vecline[j,1,0])))
                 # cv2.circle(ptr_image, pt2, 2, (0, 255, 0), thickness=2)
                 cv2.line(ptr_image, pt1, pt2, (0, 0, 255), 2)
 
@@ -113,14 +114,16 @@ if __name__ == '__main__':
 
     rospy.init_node('linefeature_tracker', anonymous=False)
     
-    yamlPath = '/home/nvidia/plvins_ws/src/PL-VINS/feature_tracker/config/config.yaml'
+    # yamlPath = '/home/nvidia/plvins_ws/src/PL-VINS/feature_tracker/config/config.yaml'
+    yamlPath = rospy.get_param("~config_path")
+    # print(yamlPath)
     with open(yamlPath,'rb') as f:
       # yaml文件通过---分节，多个节组合成一个列表
       params = yaml.load(f, Loader=yaml.FullLoader)
-    my_line_extract_model = MyLinefeatureExtractModel(params["line_feature_cfg"]["num_samples"], params["line_feature_cfg"]["min_dist_pts"], params["line_feature_cfg"]["grid_size"])  # 利用参数文件建立自定义线特征模型
-    my_line_match_model = MyLinefeatureMatchModel(**params["line_feature_cfg"])
-    # Option_Param = readParameters()
-    # print(Option_Param)
+      line_params = params["line_feature_cfg"]
+      
+    my_line_extract_model = MyLinefeatureExtractModel(line_params)  # 利用参数文件建立自定义线特征模型
+    my_line_match_model = MyLinefeatureMatchModel(line_params)
 
     CamearIntrinsicParam = PinholeCamera(
         fx = 461.6, fy = 460.3, cx = 363.0, cy = 248.1, 
@@ -132,13 +135,16 @@ if __name__ == '__main__':
     #       k1 = -0.2870635986328125, k2 = 0.06902313232421875, p1 = 0.000362396240234375, p2 = 0.000701904296875
     #       )
     linefeature_tracker = LineFeatureTracker(my_line_extract_model, my_line_match_model, CamearIntrinsicParam, 
-                                             num_samples=params["line_feature_cfg"]["num_samples"], max_cnt=100) # 利用点特征模型和相机模型生成点特征处理器
+                                             num_samples=line_params["num_samples"], min_cnt=line_params["min_cnt"]) # 利用点特征模型和相机模型生成点特征处理器
 
-    #   sub_img = rospy.Subscriber("/mynteye/left/image_color", Image, img_callback, FeatureParameters,  queue_size=100)
-    sub_img = rospy.Subscriber("/cam0/image_raw", Image, img_callback, linefeature_tracker,  queue_size=100) # 监听图像，提取和追踪点特征并发布
-    
+    image_topic = params["image_topic"]
+    rospy.loginfo("Linefeature Tracker initialization completed, waiting for img from topic: %s", image_topic)
+    sub_img = rospy.Subscriber(image_topic, Image, img_callback, 
+                               {"feature_tracker": linefeature_tracker, "H": line_params["H"], "W": line_params["W"]}, 
+                               queue_size=100)
 
-    pub_img = rospy.Publisher("linefeature", PointCloud, queue_size=1000)
-    pub_match = rospy.Publisher("linefeature_img", Image, queue_size=1000)
+
+    pub_img = rospy.Publisher("~linefeature", PointCloud, queue_size=1000)
+    pub_match = rospy.Publisher("~linefeature_img", Image, queue_size=1000)
 
     rospy.spin()

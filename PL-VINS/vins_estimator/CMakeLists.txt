@@ -12,12 +12,11 @@ find_package(catkin REQUIRED COMPONENTS
     geometry_msgs
     nav_msgs
     tf
+    cv_bridge
     camera_model
     )
 
-
-# Set(OpenCV_DIR "/home/nvidia/package/opencv-3.2.0/build") # important find opencv version
-find_package(OpenCV)
+find_package(OpenCV REQUIRED)
 
 find_package(Ceres REQUIRED)
 
@@ -70,7 +69,7 @@ LIST(APPEND SOURCEFILES
 
 )
 ADD_LIBRARY(vinsEstimatorLib SHARED ${SOURCEFILES})
-TARGET_LINK_LIBRARIES(vinsEstimatorLib ${catkin_LIBRARIES} ${OpenCV_LIBS} ${CERES_LIBRARIES} ${GPERFTOOLS_PROFILER})
+TARGET_LINK_LIBRARIES(vinsEstimatorLib ${catkin_LIBRARIES} ${OpenCV_LIBS} ${CERES_LIBRARIES})
 
 add_executable(plvins_estimator
         src/estimator_node.cpp

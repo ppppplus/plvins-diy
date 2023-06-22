@@ -25,7 +25,7 @@ myjet = np.array([[0.        , 0.        , 0.5       ],
 
 
 class LineFeatureTracker:
-	def __init__(self, extract_model, match_model, cams, num_samples=8, max_cnt=150):
+	def __init__(self, extract_model, match_model, cams, num_samples=8, min_cnt=150):
 		# extract_model为自定义点特征模型类，其中提供extract方法接受一个图像输入，输出线特征信息（lines, lens）
 		self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 		self.extractor = extract_model
@@ -62,7 +62,7 @@ class LineFeatureTracker:
 		self.camera = cams
 		self.new_frame = None
 		self.allfeature_cnt = 0
-		self.max_cnt = max_cnt
+		self.min_cnt = min_cnt
 		self.no_display = True
 		
 		# self.cuda = opts.cuda
@@ -135,7 +135,7 @@ class LineFeatureTracker:
 		print("current number of lines is :", lines_num)
 		
 
-		# if keyPoint_size < self.max_cnt-50:
+		# if keyPoint_size < self.min_cnt-50:
 		# 	self.forwframe_['keyPoint'], self.forwframe_['descriptor'], heatmap = self.SuperPoint_Ghostnet.run(self.new_frame, conf_thresh=0.01)
 		# 	keyPoint_size = self.forwframe_['keyPoint'].shape[1]
 		# 	print("next keypoint size is ", keyPoint_size)
@@ -196,7 +196,7 @@ class LineFeatureTracker:
 
 			########### 跟踪的线特征少了，那就补充新的线特征 ###############
 
-			diff_n = self.max_cnt - vecline_tracked.shape[0]
+			diff_n = self.min_cnt - vecline_tracked.shape[0]
 			if diff_n > 0:
 				if vecline_new.shape[0] >= diff_n:
 					for k in range(diff_n):

@@ -20,6 +20,33 @@ void Estimator::setParameter()
 //    lineProjectionFactor::sqrt_info =  Matrix2d::Identity();
 
     baseline_ = BASE_LINE;
+    output_dir = VINS_RESULT_PATH + "/" + DATASET_NAME;
+}
+
+void Estimator::createOutput()
+{   
+    if (access(output_dir.c_str(), F_OK) != 0) {
+        try{
+            mkdir(output_dir.c_str(), 0777);
+        }
+        catch(...){
+            std::cerr << "Failed to create directory: " << output_dir << std::endl;
+        }
+    }
+    // if(!std::filesystem::exists(output_dir))
+    // {   
+    //     try{
+    //         std::filesystem::create_directories(output_dir)
+    //     }
+    //     catch(...){
+    //         
+    //     }
+    // }
+    auto now = std::chrono::system_clock::now();
+    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    ROS_INFO("Results will be saved in: %s", output_dir.c_str());
+    time_stamp = std::to_string(timestamp);
+    
 }
 
 void Estimator::clearState()
@@ -319,7 +346,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
 
 void Estimator::processImage(const map<int, vector<pair<int, Vector3d>>> &image, const map<int, vector<pair<int, Vector8d>>> &lines, const std_msgs::Header &header)
 {
-    // 关键函数，处理点线特征图像
+
     ROS_DEBUG("new image coming ------------------------------------------");
     ROS_DEBUG("Adding feature points %lu", image.size());
     //if (f_manager.addFeatureCheckParallax(frame_count, image))           // 当视差较大时，marg 老的关键帧
@@ -543,7 +570,7 @@ bool Estimator::initialStructure()
         //ROS_WARN("IMU variation %f!", var);
         if(var < 0.25)
         {
-            ROS_INFO("IMU excitation not enouth!");
+            ROS_INFO("IMU excitation not enough!");
             //return false;
         }
     }
@@ -1690,7 +1717,7 @@ void Estimator::optimizationwithLine()
     double2vector2();   // Line pose change
     TicToc t_culling;
     f_manager.removeLineOutlier(Ps,tic,ric);   // remove Line outlier
-    ROS_INFO("culling line feature: %f ms", t_culling.toc());
+    ROS_INFO("culling line feautre: %f ms", t_culling.toc());
 
 #ifdef DebugFactor
     // ----------------  debug  ----------------------
