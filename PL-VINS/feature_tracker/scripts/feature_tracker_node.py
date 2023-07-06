@@ -20,7 +20,7 @@ from sensor_msgs.msg import ChannelFloat32
 from time import time
 
 from utils.parameter import read_image
-from utils.camera_model import PinholeCamera
+from utils.camera_model import CameraModel
 from feature_tracker import FeatureTracker
 
 from superpoint.model import MyPointExtractModel
@@ -70,14 +70,14 @@ def img_callback(img_msg, params_dict):
                 id_of_point.values.append(ids[j])
                 u_of_point.values.append(cur_pts[0,j])
                 v_of_point.values.append(cur_pts[1,j])
-                velocity_x_of_point.values.append(0.0)
-                velocity_y_of_point.values.append(0.0)
+                # velocity_x_of_point.values.append(0.0)
+                # velocity_y_of_point.values.append(0.0)
 
             feature_points.channels.append(id_of_point)
             feature_points.channels.append(u_of_point)
             feature_points.channels.append(v_of_point)
-            feature_points.channels.append(velocity_x_of_point)
-            feature_points.channels.append(velocity_y_of_point)
+            # feature_points.channels.append(velocity_x_of_point)
+            # feature_points.channels.append(velocity_y_of_point)
 
             pub_img.publish(feature_points)
 
@@ -106,21 +106,19 @@ if __name__ == '__main__':
     with open(yamlPath,'rb') as f:
       params = yaml.load(f, Loader=yaml.FullLoader)
       point_params = params["point_feature_cfg"]
+    #   camera_params = params["camera_cfg"]
 
     my_point_extract_model = MyPointExtractModel(point_params)  # 利用参数文件建立自定义点特征模型
     my_point_match_model = MyPointMatchModel(point_params)
 
-    CamearIntrinsicParam = PinholeCamera(
-        fx = 461.6, fy = 460.3, cx = 363.0, cy = 248.1, 
-        k1 = -2.917e-01, k2 = 8.228e-02, p1 = 5.333e-05, p2 = -1.578e-04
-        )  
+    # CameraIntrinsicParam = PinholeCamera(
+    #     fx = 461.6, fy = 460.3, cx = 363.0, cy = 248.1, 
+    #     k1 = -2.917e-01, k2 = 8.228e-02, p1 = 5.333e-05, p2 = -1.578e-04
+    #     )  
 
-    #   CamearIntrinsicParam = PinholeCamera(
-    #       fx = 349.199951171875, fy = 349.199951171875, cx = 322.2005615234375, cy = 246.161865234375, 
-    #       k1 = -0.2870635986328125, k2 = 0.06902313232421875, p1 = 0.000362396240234375, p2 = 0.000701904296875
-    #       )
-    feature_tracker = FeatureTracker(my_point_extract_model, my_point_match_model, 
-                                     CamearIntrinsicParam, min_cnt=point_params["min_cnt"]) # 利用点特征模型和相机模型生成点特征处理器
+    # camera_model = CameraModel(camera_params)
+    # CameraIntrinsicParam = camera_model.generateCameraModel()
+    feature_tracker = FeatureTracker(my_point_extract_model, my_point_match_model, min_cnt=point_params["min_cnt"]) # 利用点特征模型和相机模型生成点特征处理器
     
     image_topic = params["image_topic"]
     rospy.loginfo("Pointfeature Tracker initialization completed, waiting for img from topic: %s", image_topic)

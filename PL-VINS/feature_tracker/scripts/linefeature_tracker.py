@@ -3,6 +3,7 @@
 """
 import cv2
 import copy
+import rospy
 import numpy as np 
 import torch
 from time import time
@@ -100,7 +101,7 @@ class LineFeatureTracker:
 			cur_un_vecline[i,0,1] = b0[1] / b0[2]
 			cur_un_vecline[i,1,0] = b1[0] / b1[2]
 			cur_un_vecline[i,1,1] = b1[1] / b1[2]
-
+			# rospy.loginfo("get line sx%f, sy%f, ex%f, ey%f", cur_vecline[i,0,0], cur_vecline[i,0,1], cur_vecline[i,1,0], cur_vecline[i,1,1])
 		return cur_un_vecline, cur_vecline, ids
 
 
@@ -120,6 +121,9 @@ class LineFeatureTracker:
 			self.curframe_['image'] = self.new_frame
 			first_image_flag = True
 		else:
+			self.forwframe_['lineID'] = []
+			self.forwframe_['descriptor'] = torch.zeros((128,0)).to(self.device)
+			self.forwframe_['valid_points'] = None
 			self.forwframe_['image'] = self.new_frame	# 建立新的帧
 
 		# TODO: 利用线特征提取器提取new_frame的特征信息
@@ -160,6 +164,7 @@ class LineFeatureTracker:
 									self.forwframe_['valid_points'],
 									self.curframe_['valid_points']
 							)
+			# print("index:", index_lines1, index_lines2)
 			global match_time
 			match_time += time()-start_time
 			print("match time is :", match_time)

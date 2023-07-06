@@ -20,7 +20,7 @@ from sensor_msgs.msg import ChannelFloat32
 from time import time
 
 from utils.parameter import read_image
-from utils.camera_model import PinholeCamera
+from utils.camera_model import CameraModel
 from linefeature_tracker import LineFeatureTracker
 
 from sold2.model import MyLinefeatureExtractModel, MyLinefeatureMatchModel # 导入自定义线特征模型
@@ -61,8 +61,8 @@ def img_callback(img_msg, params_dict):
             id_of_line = ChannelFloat32()
             u_of_endpoint = ChannelFloat32()
             v_of_endpoint = ChannelFloat32()    # u,v是线段端点
-            velocity_x_of_line = ChannelFloat32()
-            velocity_y_of_line = ChannelFloat32()
+            # velocity_x_of_line = ChannelFloat32()
+            # velocity_y_of_line = ChannelFloat32()
             feature_lines.header = img_msg.header
             feature_lines.header.frame_id = "world"
 
@@ -70,23 +70,23 @@ def img_callback(img_msg, params_dict):
 
             for j in range(len(ids)):
                 un_pts = Point32()
-                un_pts.x = cur_un_vecline[j,0,0]
-                un_pts.y = cur_un_vecline[j,0,1]
+                un_pts.x = cur_un_vecline[j,0,1]    # VINS后端的坐标系和opencv相同
+                un_pts.y = cur_un_vecline[j,0,0]
                 un_pts.z = 1
 
                 # 向建立的点云消息中加入line信息
                 feature_lines.points.append(un_pts)
                 id_of_line.values.append(ids[j])
-                u_of_endpoint.values.append(cur_un_vecline[j,1,0])
-                v_of_endpoint.values.append(cur_un_vecline[j,1,1])
-                velocity_x_of_line.values.append(0.0)
-                velocity_y_of_line.values.append(0.0)
+                u_of_endpoint.values.append(cur_un_vecline[j,1,1])
+                v_of_endpoint.values.append(cur_un_vecline[j,1,0])
+                # velocity_x_of_line.values.append(0.0)
+                # velocity_y_of_line.values.append(0.0)
 
             feature_lines.channels.append(id_of_line)
             feature_lines.channels.append(u_of_endpoint)
             feature_lines.channels.append(v_of_endpoint)
-            feature_lines.channels.append(velocity_x_of_line)
-            feature_lines.channels.append(velocity_y_of_line)
+            # feature_lines.channels.append(velocity_x_of_line)
+            # feature_lines.channels.append(velocity_y_of_line)
 
             pub_img.publish(feature_lines)
 
@@ -115,26 +115,25 @@ if __name__ == '__main__':
     rospy.init_node('linefeature_tracker', anonymous=False)
     
     # yamlPath = '/home/nvidia/plvins_ws/src/PL-VINS/feature_tracker/config/config.yaml'
-    yamlPath = rospy.get_param("~config_path")
+    yamlPath = rospy.get_param("~config_path", "/home/plus/Work/plvins_ws/src/PL-VINS/config/feature_tracker/config.yaml")
     # print(yamlPath)
     with open(yamlPath,'rb') as f:
       # yaml文件通过---分节，多个节组合成一个列表
       params = yaml.load(f, Loader=yaml.FullLoader)
       line_params = params["line_feature_cfg"]
+      camera_params = params["camera_cfg"]
       
     my_line_extract_model = MyLinefeatureExtractModel(line_params)  # 利用参数文件建立自定义线特征模型
     my_line_match_model = MyLinefeatureMatchModel(line_params)
 
-    CamearIntrinsicParam = PinholeCamera(
-        fx = 461.6, fy = 460.3, cx = 363.0, cy = 248.1, 
-        k1 = -2.917e-01, k2 = 8.228e-02, p1 = 5.333e-05, p2 = -1.578e-04
-        )  
+    # CamearIntrinsicParam = PinholeCamera(
+    #     fx = 461.6, fy = 460.3, cx = 363.0, cy = 248.1, 
+    #     k1 = -2.917e-01, k2 = 8.228e-02, p1 = 5.333e-05, p2 = -1.578e-04
+    #     )  
 
-    #   CamearIntrinsicParam = PinholeCamera(
-    #       fx = 349.199951171875, fy = 349.199951171875, cx = 322.2005615234375, cy = 246.161865234375, 
-    #       k1 = -0.2870635986328125, k2 = 0.06902313232421875, p1 = 0.000362396240234375, p2 = 0.000701904296875
-    #       )
-    linefeature_tracker = LineFeatureTracker(my_line_extract_model, my_line_match_model, CamearIntrinsicParam, 
+    camera_model = CameraModel(camera_params)
+    CameraIntrinsicParam = camera_model.generateCameraModel()
+    linefeature_tracker = LineFeatureTracker(my_line_extract_model, my_line_match_model, CameraIntrinsicParam, 
                                              num_samples=line_params["num_samples"], min_cnt=line_params["min_cnt"]) # 利用点特征模型和相机模型生成点特征处理器
 
     image_topic = params["image_topic"]

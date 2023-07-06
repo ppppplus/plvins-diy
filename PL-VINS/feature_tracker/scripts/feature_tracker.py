@@ -5,6 +5,7 @@
 import cv2
 import copy
 import numpy as np 
+import rospy
 from time import time
 
 # from utils.PointTracker import PointTracker
@@ -25,7 +26,7 @@ myjet = np.array([[0.        , 0.        , 0.5       ],
 
 
 class FeatureTracker:
-	def __init__(self, extract_model, match_model, cams, min_cnt=150):
+	def __init__(self, extract_model, match_model, min_cnt=150):
 		# point_model为自定义点特征模型类，其中提供extract方法接受一个图像输入，输出特征点信息
 		self.extractor = extract_model
 		self.matcher = match_model
@@ -43,7 +44,7 @@ class FeatureTracker:
 				'image': None
 				}
 	
-		self.camera = cams
+		# self.camera = cams
 		self.new_frame = None
 		self.allfeature_cnt = 0
 		self.min_cnt = min_cnt
@@ -78,9 +79,9 @@ class FeatureTracker:
 
 		for i in range(cur_pts.shape[1]):
 			b = self.camera.liftProjective(cur_pts[:2,i])
-			cur_un_pts[0,i] = b[0] / b[2]
-			cur_un_pts[1,i] = b[1] / b[2]
-
+			cur_un_pts[0,i] = b[0] / b[2]	# x
+			cur_un_pts[1,i] = b[1] / b[2]	# y
+		# rospy.loginfo("get point x%f, y%f", cur_pts[0,i], cur_pts[1,i])
 		return cur_un_pts, cur_pts, ids
 
 

@@ -1,14 +1,69 @@
 import os
+import math
+import rospy 
+class CameraModel():
+    def __init__(self, params):
+        self.support_camera_types = ["PINHOLE", "KANNALA_BRANDT"]
+        self.params = params
+        self.model_type = self.params["model_type"]
+        self.checkCameraType()
+        rospy.loginfo(params.keys())
+    
+    def checkCameraType(self):
+        if self.model_type not in self.support_camera_types:
+            raise ValueError(
+                "[Error] The camera type selection '%s' is not supported.", 
+                self.model_type)
+
+    def generateCameraModel(self):
+        if self.model_type == "PINHOLE":
+            camera_model = PinholeCamera(self.params["distortion_parameters"], self.params["projection_parameters"])
+            return camera_model
+        elif self.model_type == "KANNALA_BRANDT":
+            camera_model = KannalabrantCamera(self.params["distortion_parameters"], self.params["projection_parameters"])
+            return camera_model
+        else:
+            raise ValueError(
+                "[Error] The camera type selection '%s' is not supported.", 
+                self.model_type)
+
+class KannalabrantCamera:
+    def __init__(self, projection_parameters):
+        self.k2 = projection_parameters["k2"]
+        self.k3 = projection_parameters["k3"]
+        self.k4 = projection_parameters["k4"]
+        self.k5 = projection_parameters["k5"]
+        self.mu = projection_parameters["mu"]
+        self.mv = projection_parameters["mv"]
+        self.u0 = projection_parameters["u0"]
+        self.v0 = projection_parameters["v0"]
+    def distortion(self, theta, x, y, r):
+        theta_2 = theta * theta
+        theta_d = theta*(1+self.k2*theta_2+self.k3*theta_2*theta_2
+                         +self.k3*theta_2*theta_2*theta_2
+                         +self.k4*theta_2*theta_2*theta_2*theta_2)
+        dx = self.mu*theta_d*x / math.sqrt(r) + self.u0
+        dy = self.mv*theta_d*y / math.sqrt(r) + self.v0
+        return [dx, dy, 1.0]
+
+    def liftProjective(self, p):
+        # convert pixel coord to normalized coord w/o distortion
+        r = math.sqrt(p[0]*p[0] + p[1]*p[1])
+        theta = math.atan2(p[1], p[0])
+        d = self.distortion(theta, p[0], p[1], theta)
+        return d
+
+
 
 class PinholeCamera:
 
-    def __init__(self, fx, fy ,cx, cy, k1=0.0, k2=0.0, p1=0.0, p2=0.0):
+    def __init__(self, distortion_parameters, projection_parameters):
 
-        self.fx = fx
-        self.fy = fy
-        self.cx = cx
-        self.cy = cy
-        self.d = [k1, k2, p1, p2]
+        self.fx = projection_parameters["fx"]
+        self.fy = projection_parameters["fy"]
+        self.cx = projection_parameters["cx"]
+        self.cy = projection_parameters["cy"]
+        self.d = list(distortion_parameters.values())
 
     def distortion(self, p_u):
 
