@@ -26,10 +26,11 @@ myjet = np.array([[0.        , 0.        , 0.5       ],
 
 
 class FeatureTracker:
-	def __init__(self, extract_model, match_model, min_cnt=150):
+	def __init__(self, extract_model, match_model, camera_model, min_cnt=150):
 		# point_model为自定义点特征模型类，其中提供extract方法接受一个图像输入，输出特征点信息
 		self.extractor = extract_model
 		self.matcher = match_model
+		self.camera = camera_model
 		self.forwframe_ = {
 				'PointID': [],
 				'keyPoint': np.zeros((3,0)),
@@ -44,7 +45,6 @@ class FeatureTracker:
 				'image': None
 				}
 	
-		# self.camera = cams
 		self.new_frame = None
 		self.allfeature_cnt = 0
 		self.min_cnt = min_cnt
@@ -76,24 +76,25 @@ class FeatureTracker:
 		cur_un_pts = copy.deepcopy(self.curframe_['keyPoint'])
 		ids = copy.deepcopy(self.curframe_['PointID'])
 		cur_pts = copy.deepcopy(self.curframe_['keyPoint'])
-
+		un_img = copy.deepcopy(self.curframe_['image'])
+		un_img = cv2.cvtColor(un_img, cv2.COLOR_GRAY2RGB)
 		for i in range(cur_pts.shape[1]):
 			b = self.camera.liftProjective(cur_pts[:2,i])
 			cur_un_pts[0,i] = b[0] / b[2]	# x
 			cur_un_pts[1,i] = b[1] / b[2]	# y
 		# rospy.loginfo("get point x%f, y%f", cur_pts[0,i], cur_pts[1,i])
-		return cur_un_pts, cur_pts, ids
+		return cur_un_pts, cur_pts, ids, un_img
 
-
+	
 	def readImage(self, new_img):
 
 		# assert(new_img.ndim==2 and new_img.shape[0]==self.height and new_img.shape[1]==self.width), "Frame: provided image has not the same size as the camera model or image is not grayscale"
 		
-		self.new_frame = new_img
+		self.new_frame = self.camera.undistortImg(new_img)
 		# print("wsssssssssssssssssssssssssssssssssss:", self.new_frame.ndim)
 		# cv2.imshow('new_frame', self.new_frame)
 		# cv2.waitKey(0)
-
+		
 		first_image_flag = False
 
 		if not self.forwframe_['PointID']:
@@ -119,7 +120,8 @@ class FeatureTracker:
 
 		global run_time
 		run_time += ( time()-start_time )
-		print("run time is :", run_time)
+		print("point extraction time is:", time()-start_time)
+		print("total run time is :", run_time)
 
 		num_points = self.forwframe_['keyPoint'].shape[1]
 		print("current keypoint size is :", num_points)

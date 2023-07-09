@@ -1,15 +1,15 @@
-%YAML:1.0
+# %YAML:1.0
 
 #common parameters
 imu_topic: "/imu0"
-# image_topic: "/cam0/image_raw"
-output_path: "/home/pl/plvins_ws/src/PL-VINS/Trajactory"         # vins outputs will be wrttento vins_folder_path + output_path
+image_topic: "/cam0/image_raw"
+output_path: "/home/plus/Work/plvins_ws/src/PL-VINS/Trajactory"         # vins outputs will be wrttento vins_folder_path + output_path
 
 #camera calibration 
 model_type: PINHOLE
 camera_name: camera
-image_width: 546
-image_height: 222
+image_width: 752
+image_height: 480
 distortion_parameters:
    k1: -2.917e-01
    k2: 8.228e-02
@@ -28,7 +28,7 @@ estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trus
 ex_calib_result_path: "/config/euroc/ex_calib_result.yaml"  # If you choose 1 or 2, the extrinsic calibration result will be written vins_folder_path + ex_calib_result_path.                        
 #If you choose 0 or 1, you should write down the following matrix.
 #Rotation from camera frame to imu frame, imu^R_cam
-extrinsicRotation: !!opencv-matrix
+extrinsicRotation: 
    rows: 3
    cols: 3
    dt: d
@@ -36,7 +36,7 @@ extrinsicRotation: !!opencv-matrix
           9.9975032725037394e-01,1.5179286982016649e-02, 1.6397329340101366e-02,
        -1.6395942146232377e-02, -2.1583766949435403e-04,9.9986555420978362e-01]
 #Translation from camera frame to imu frame, imu^T_cam
-extrinsicTranslation: !!opencv-matrix
+extrinsicTranslation:
    rows: 3
    cols: 1
    dt: d
@@ -73,7 +73,7 @@ loop_closure: 1   #if you want to use loop closure to minimize the drift, set lo
                      #also give the camera calibration file same as feature_tracker node
 load_previous_pose_graph: 1 
 fast_relocalization: 0 
-pose_graph_save_path: "/home/plus/plvins_ws/src/PL-VINS/Trajactory/posegraph/" # save and load path
+pose_graph_save_path: "/home/plus/Work/plvins_ws/src/PL-VINS/Trajactory/posegraph/" # save and load path
 
 
 pattern_file: "/support_files/brief_pattern.yml"

@@ -1112,14 +1112,14 @@ bool Estimator::failureDetection()
     }
     */
     Vector3d tmp_P = Ps[WINDOW_SIZE];
-    if ((tmp_P - last_P).norm() > 5)
+    if ((tmp_P - last_P).norm() > 100)
     {
-        ROS_INFO(" big translation");
+        ROS_WARN(" big translation: %f", (tmp_P - last_P).norm());
         return true;
     }
-    if (abs(tmp_P.z() - last_P.z()) > 1)
+    if (abs(tmp_P.z() - last_P.z()) > 100)
     {
-        ROS_INFO(" big z translation");
+        ROS_WARN(" big z translation: last%f, now%f", last_P.z(), tmp_P.z());
         return true; 
     }
     Matrix3d tmp_R = Rs[WINDOW_SIZE];

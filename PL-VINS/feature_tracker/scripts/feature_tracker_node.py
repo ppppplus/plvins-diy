@@ -58,7 +58,7 @@ def img_callback(img_msg, params_dict):
             feature_points.header = img_msg.header
             feature_points.header.frame_id = "world"
 
-            cur_un_pts, cur_pts, ids = feature_tracker.undistortedPoints()
+            cur_un_pts, cur_pts, ids, cur_un_img = feature_tracker.undistortedPoints()
 
             for j in range(len(ids)):
                 un_pts = Point32()
@@ -88,7 +88,8 @@ def img_callback(img_msg, params_dict):
             ptr_toImageMsg.width = width
             ptr_toImageMsg.encoding = 'bgr8'
 
-            ptr_image = bridge.imgmsg_to_cv2(img_msg, "bgr8")
+            # ptr_image = bridge.imgmsg_to_cv2(img_msg, "bgr8")
+            ptr_image = cur_un_img
 
             for pt in cur_pts.T:
                 pt2 = (int(round(pt[0])), int(round(pt[1])))
@@ -100,13 +101,12 @@ def img_callback(img_msg, params_dict):
 
 
 if __name__ == '__main__':
-
     rospy.init_node('feature_tracker', anonymous=False)
-    yamlPath = rospy.get_param("~config_path", "/home/plus/Work/plvins_ws/src/PL-VINS/feature_tracker/config/config.yaml")
+    yamlPath = rospy.get_param("~config_path", "/home/plus/plvins_ws/src/PL-VINS/config/feature_tracker/mtuav_v3_config.yaml")
     with open(yamlPath,'rb') as f:
       params = yaml.load(f, Loader=yaml.FullLoader)
       point_params = params["point_feature_cfg"]
-    #   camera_params = params["camera_cfg"]
+      camera_params = params["camera_cfg"]
 
     my_point_extract_model = MyPointExtractModel(point_params)  # 利用参数文件建立自定义点特征模型
     my_point_match_model = MyPointMatchModel(point_params)
@@ -116,9 +116,10 @@ if __name__ == '__main__':
     #     k1 = -2.917e-01, k2 = 8.228e-02, p1 = 5.333e-05, p2 = -1.578e-04
     #     )  
 
-    # camera_model = CameraModel(camera_params)
-    # CameraIntrinsicParam = camera_model.generateCameraModel()
-    feature_tracker = FeatureTracker(my_point_extract_model, my_point_match_model, min_cnt=point_params["min_cnt"]) # 利用点特征模型和相机模型生成点特征处理器
+    camera_model = CameraModel(camera_params)
+    CameraIntrinsicParam = camera_model.generateCameraModel()
+    feature_tracker = FeatureTracker(my_point_extract_model, my_point_match_model, CameraIntrinsicParam,
+                                     min_cnt=point_params["min_cnt"]) # 利用点特征模型和相机模型生成点特征处理器
     
     image_topic = params["image_topic"]
     rospy.loginfo("Pointfeature Tracker initialization completed, waiting for img from topic: %s", image_topic)

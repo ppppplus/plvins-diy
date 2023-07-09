@@ -66,7 +66,7 @@ def img_callback(img_msg, params_dict):
             feature_lines.header = img_msg.header
             feature_lines.header.frame_id = "world"
 
-            cur_un_vecline, cur_vecline, ids = linefeature_tracker.undistortedLineEndPoints()
+            cur_un_vecline, cur_vecline, ids, cur_un_img = linefeature_tracker.undistortedLineEndPoints()
 
             for j in range(len(ids)):
                 un_pts = Point32()
@@ -97,7 +97,8 @@ def img_callback(img_msg, params_dict):
             ptr_toImageMsg.width = width
             ptr_toImageMsg.encoding = 'bgr8'
 
-            ptr_image = bridge.imgmsg_to_cv2(img_msg, "bgr8")
+            # ptr_image = bridge.imgmsg_to_cv2(img_msg, "bgr8")
+            ptr_image = cur_un_img
 
             for j in range(len(ids)):
                 pt1 = (int(round(cur_vecline[j,0,1])), int(round(cur_vecline[j,0,0])))
@@ -115,7 +116,7 @@ if __name__ == '__main__':
     rospy.init_node('linefeature_tracker', anonymous=False)
     
     # yamlPath = '/home/nvidia/plvins_ws/src/PL-VINS/feature_tracker/config/config.yaml'
-    yamlPath = rospy.get_param("~config_path", "/home/plus/Work/plvins_ws/src/PL-VINS/config/feature_tracker/config.yaml")
+    yamlPath = rospy.get_param("~config_path", "/home/plus/Work/plvins_ws/src/PL-VINS/config/feature_tracker/mtuav_config.yaml")
     # print(yamlPath)
     with open(yamlPath,'rb') as f:
       # yaml文件通过---分节，多个节组合成一个列表

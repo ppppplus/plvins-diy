@@ -92,6 +92,8 @@ class LineFeatureTracker:
 		cur_un_vecline = copy.deepcopy(self.curframe_['vecline'])
 		cur_vecline = copy.deepcopy(self.curframe_['vecline'])
 		ids = copy.deepcopy(self.curframe_['lineID'])
+		un_img = copy.deepcopy(self.curframe_['image'])
+		un_img = cv2.cvtColor(un_img, cv2.COLOR_GRAY2RGB)
 		
 
 		for i in range(cur_vecline.shape[0]):
@@ -102,14 +104,14 @@ class LineFeatureTracker:
 			cur_un_vecline[i,1,0] = b1[0] / b1[2]
 			cur_un_vecline[i,1,1] = b1[1] / b1[2]
 			# rospy.loginfo("get line sx%f, sy%f, ex%f, ey%f", cur_vecline[i,0,0], cur_vecline[i,0,1], cur_vecline[i,1,0], cur_vecline[i,1,1])
-		return cur_un_vecline, cur_vecline, ids
+		return cur_un_vecline, cur_vecline, ids, un_img
 
 
 	def readImage(self, new_img):
 
 		# assert(new_img.ndim==2 and new_img.shape[0]==self.height and new_img.shape[1]==self.width), "Frame: provided image has not the same size as the camera model or image is not grayscale"
 		
-		self.new_frame = new_img
+		self.new_frame = self.camera.undistortImg(new_img)
 		# print("wsssssssssssssssssssssssssssssssssss:", self.new_frame.ndim)
 		# cv2.imshow('new_frame', self.new_frame)
 		# cv2.waitKey(0)
@@ -133,7 +135,7 @@ class LineFeatureTracker:
 
 		global run_time
 		run_time += ( time()-start_time )
-		print("run time is :", run_time)
+		print("total run time is :", run_time)
 
 		lines_num = self.forwframe_['vecline'].shape[0]
 		print("current number of lines is :", lines_num)
