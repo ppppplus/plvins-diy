@@ -23,8 +23,7 @@ from utils.parameter import read_image
 from utils.camera_model import CameraModel
 from linefeature_tracker import LineFeatureTracker
 
-from sold2.model import MyLinefeatureExtractModel, MyLinefeatureMatchModel # 导入自定义线特征模型
-# from utils.PointTracker import PointTracker
+from utils_line.my_line_model import create_lineextract_instance, create_linematch_instance
 
 init_pub = False
 count_frame = 0
@@ -124,8 +123,8 @@ if __name__ == '__main__':
       line_params = params["line_feature_cfg"]
       camera_params = params["camera_cfg"]
       
-    my_line_extract_model = MyLinefeatureExtractModel(line_params)  # 利用参数文件建立自定义线特征模型
-    my_line_match_model = MyLinefeatureMatchModel(line_params)
+    my_line_extract_model = create_lineextract_instance(line_params)  # 利用参数文件建立自定义线特征模型
+    my_line_match_model = create_linematch_instance(line_params)
 
     # CamearIntrinsicParam = PinholeCamera(
     #     fx = 461.6, fy = 460.3, cx = 363.0, cy = 248.1, 

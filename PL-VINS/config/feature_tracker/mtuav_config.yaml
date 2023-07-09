@@ -1,7 +1,7 @@
 
 image_topic: "/frontfpv_color"
 point_feature_cfg:
-        weights_path: '/home/plus/Work/plvins_ws/src/PL-VINS/feature_tracker/scripts/superpoint/superpoint_v1.pth'
+        weights_path: '/home/plus/plvins_ws/src/PL-VINS/feature_tracker/scripts/superpoint/superpoint_v1.pth'
         max_length: 5  # Maximum length of point tracks
         nms_dist: 4    # Non Maximum Suppression (NMS) distance
         conf_thresh: 0.015 # Detector confidence threshold

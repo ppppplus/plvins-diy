@@ -131,7 +131,7 @@ class LineFeatureTracker:
 		# TODO: 利用线特征提取器提取new_frame的特征信息
 		print('*'*10 + " current frame " + '*'*10)
 		start_time = time()
-		self.forwframe_['vecline'], self.forwframe_['descriptor'], self.forwframe_['valid_points']  = self.extractor.extractLines(self.new_frame)	# vecline为num_line*2*2，desc为128*num_line*num_samples
+		self.forwframe_['vecline'], self.forwframe_['descriptor'], self.forwframe_['valid_points']  = self.extractor.extract(self.new_frame)	# vecline为num_line*2*2，desc为128*num_line*num_samples
 
 		global run_time
 		run_time += ( time()-start_time )
