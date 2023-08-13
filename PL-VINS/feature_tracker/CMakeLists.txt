@@ -27,30 +27,30 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     )
 
-# set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-# find_package(Eigen3  REQUIRED)
-# include_directories(
-#   ${catkin_INCLUDE_DIRS}
-#   ${EIGEN3_INCLUDE_DIR}
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+find_package(Eigen3  REQUIRED)
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
 #   /home/plus/plvins_ws/src/PL-VINS/feature_tracker/src/line_descriptor/include # find LSD 
-# ) 
+) 
 
 # file(GLOB_RECURSE OLD_OPENCV "/usr/lib/aarch64-linux-gnu/libopencv*")
 #file(GLOB_RECURSE OLD_CV_BRIDGE "/opt/ros/noetic/lib/libcv_bridge.so")
 # list(REMOVE_ITEM catkin_LIBRARIES ${OLD_OPENCV})
 #list(REMOVE_ITEM catkin_LIBRARIES ${OLD_CV_BRIDGE})
 
-# add_executable(feature_tracker
-#     src/feature_tracker_node.cpp
-#     src/parameters.cpp
-#     src/feature_tracker.cpp
-#     )
+add_executable(origin_feature_tracker
+    src/feature_tracker_node.cpp
+    src/parameters.cpp
+    src/feature_tracker.cpp
+    )
 # add_executable(feature_tracker
     # src/feature_tracker_node.py
     # src/parameters.cpp
     # src/feature_tracker.py
     # )
-# target_link_libraries(feature_tracker ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBS} ${GPERFTOOLS_PROFILER})
+target_link_libraries(feature_tracker ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBS} ${GPERFTOOLS_PROFILER})
 
 # line detect and match
 # add_executable(LineFeature_tracker    

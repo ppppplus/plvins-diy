@@ -107,16 +107,10 @@ if __name__ == '__main__':
       point_params = params["point_feature_cfg"]
       camera_params = params["camera_cfg"]
 
-    my_pointextract_model = create_pointextract_instance(point_params)  # 利用参数文件建立自定义点特征模型
-    my_pointmatch_model = create_pointmatch_instance(point_params)
-
-    # CameraIntrinsicParam = PinholeCamera(
-    #     fx = 461.6, fy = 460.3, cx = 363.0, cy = 248.1, 
-    #     k1 = -2.917e-01, k2 = 8.228e-02, p1 = 5.333e-05, p2 = -1.578e-04
-    #     )  
-
-    camera_model = CameraModel(camera_params)
-    CameraIntrinsicParam = camera_model.generateCameraModel()
+    my_pointextract_model = create_pointextract_instance(point_params)  # 建立自定义点特征提取模型
+    my_pointmatch_model = create_pointmatch_instance(point_params)  # 建立自定义点特征匹配模型
+    camera_model = CameraModel(camera_params)   
+    CameraIntrinsicParam = camera_model.generateCameraModel()   # 建立相机模型
     feature_tracker = FeatureTracker(my_pointextract_model, my_pointmatch_model, CameraIntrinsicParam,
                                      min_cnt=point_params["min_cnt"]) # 利用点特征模型和相机模型生成点特征处理器
     
